@@ -10,15 +10,16 @@ const AdminSurveyList = () => {
   const { data: userData, isLoading } = useQuery({
     queryKey: ['adminUserList'],
     queryFn: async () => {
-      const response = await api.get('/api/user/user');
-      return response?.data?.users || [];
+      const response = await api.get('api/user/user');
+      return response?.data?.users || []
+      ;
     }
   });
 
   const { data: surveyDetails, isLoading: isSurveyLoading } = useQuery({
     queryKey: ['userSurvey', selectedUserId],
     queryFn: async () => {
-      const response = await api.get(`/api/survey/getusersurveydata/${selectedUserId}`);
+      const response = await api.get(`api/survey/getusersurveydata/${selectedUserId}`);
       return response?.data?.userData;
     },
     enabled: !!selectedUserId,
