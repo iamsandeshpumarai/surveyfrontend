@@ -13,7 +13,7 @@ const UserHeader = () => {
   const location = useLocation();
 
   const handleLogout = useMutation({
-  mutationFn: () => api.post('/api/admin/logout'),
+  mutationFn: () => api.post('api/admin/logout'),
   onSuccess: () => {
     // 1. Clear the TanStack Query cache
     queryClient.clear();

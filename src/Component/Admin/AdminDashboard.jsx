@@ -26,7 +26,7 @@ const AdminDashboard = () => {
   });
 
   const logoutMutation = useMutation({
-    mutationFn: () => api.post('/api/admin/logout'),
+    mutationFn: () => api.post('api/admin/logout'),
     onSuccess: () => {
       queryClient.clear();
       // Using the specific URL you provided
