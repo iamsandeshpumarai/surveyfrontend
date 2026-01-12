@@ -21,11 +21,11 @@ const UserHeader = () => {
     // 2. Force a full browser reload and redirect
     // This is better than navigate() for logouts because it 
     // clears all React state completely.
-    window.location.href = '/login'; 
+    window.location.href = 'https://surveyfrontend-five.vercel.app/#/login'; 
   },
   onError: () => {
     // If the server fails, we still want to kick them out locally
-    window.location.href = '/login';
+    window.location.href = 'https://surveyfrontend-five.vercel.app/#/login';
   }
 });
 
