@@ -4,7 +4,6 @@ import Home from './Home';
 import LoginPage from './Component/Login';
 import AdminDashboard from './Component/Admin/AdminDashboard';
 import AdminSurveyList from './Component/Admin/AdminSurveyList';
-import AdminHome from './Component/Admin/AdminHome'; // Import this
 import MySurveys from './Component/MySurvey';
 import { useAuth } from './Component/Context/ContextDataprovider';
 

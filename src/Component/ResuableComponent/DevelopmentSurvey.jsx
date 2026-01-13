@@ -1,75 +1,103 @@
 import React from 'react';
 
 const DevelopmentSurvey = ({ DevData, dispatch, section }) => {
-  const handleInputChange = (questionId, optionValue, type, e) => {
-    // For checkbox: Toggle single select
-    const newValue = e.target.checked ? optionValue : ''; // Set to option if checking, clear if unchecking
+  
+  const handleInputChange = (questionId, value, type, optionLabel = null) => {
     dispatch({
       section,
       questionId,
-      value: newValue,
+      value,
       type,
+      optionLabel,
     });
   };
 
   return (
-    <div className="max-w-4xl mx-auto my-10 p-6 md:p-8 bg-white shadow-xl rounded-2xl border border-gray-200">
-      {/* Header Section – Improved with gradient border */}
-      <div className="border-b-4 border-gradient-to-r from-blue-500 to-blue-700 pb-4 mb-8">
-        <h1 className="text-2xl md:text-3xl font-extrabold text-gray-800 mb-2">{DevData?.Topic}</h1>
-        <h2 className="text-lg md:text-xl text-blue-600 font-semibold">{DevData?.Subject}</h2>
-      </div>
-
-      <div className="space-y-8 md:space-y-10">
-        {DevData?.questions.map((q) => (
-          <div key={q.id} className="animate-fade-in">
-            {/* Question Title – Better spacing and icon */}
-            <h3 className="text-lg md:text-xl font-bold text-gray-700 mb-4 flex items-center gap-3">
-              <span className="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">
-                {q.id.replace('q', '')}
-              </span>
-              {q.Question}
-            </h3>
-
-            {/* Options Grid – Fully responsive: stack on mobile, 2-3 cols on larger screens */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 ml-0 sm:ml-11">
-              {q.options.map((opt, index) => (
-                <div key={index} className="flex flex-col">
-                  {opt.type === "checkbox" ? (
-                    <label 
-                      className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 hover:shadow-md hover:bg-blue-50 ${
-                        q.answer === opt.option 
-                          ? 'border-blue-500 bg-blue-50 shadow-inner' 
-                          : 'border-gray-200 bg-gray-50'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        className="w-5 h-5 rounded accent-blue-600 focus:ring-2 focus:ring-blue-500"
-                        checked={q.answer === opt.option}
-                        onChange={(e) => handleInputChange(q.id, opt.option, 'checkbox', e)}
-                      />
-                      <span className="text-base md:text-lg font-medium text-gray-700">{opt.option}</span>
-                    </label>
-                  ) : (
-                    // Textarea for 'other' – assuming you might add; kept for completeness
-                    <div className="col-span-full mt-2">
-                      <label className="text-sm font-bold text-gray-500 block mb-2">
-                        {opt.option} (Other)
-                      </label>
-                      <textarea
-                        placeholder={opt.placeholder || 'Enter details...'}
-                        className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all min-h-[100px] text-base md:text-lg"
-                        value={q.answer || ""}
-                        onChange={(e) => handleInputChange(q.id, e.target.value, 'text', e)}
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+    <div className="max-w-5xl mx-auto my-6 md:my-10 p-0 md:p-2">
+      {/* Survey Card Container */}
+      <div className="bg-white shadow-2xl rounded-3xl border border-gray-100 overflow-hidden">
+        
+        {/* Header Section with Gradient Accent */}
+        <div className="bg-gradient-to-r from-blue-700 to-indigo-800 p-6 md:p-10 text-white">
+          <h1 className="text-2xl md:text-4xl font-black mb-3 leading-tight">
+            {DevData?.Topic}
+          </h1>
+          <div className="flex items-center gap-2 text-blue-100 opacity-90 italic">
+            <span className="h-1 w-8 bg-blue-400 rounded-full"></span>
+            <h2 className="text-lg md:text-xl font-medium">{DevData?.Subject}</h2>
           </div>
-        ))}
+        </div>
+
+        <div className="p-6 md:p-10 space-y-12">
+          {DevData?.questions.map((q, qIndex) => (
+            <div key={q.id} className="group animate-fade-in">
+              {/* Question Label */}
+              <div className="flex items-start gap-4 mb-6">
+                <span className="flex-shrink-0 bg-blue-100 text-blue-700 w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-lg shadow-sm group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
+                  {qIndex + 1}
+                </span>
+                <h3 className="text-xl md:text-2xl font-bold text-gray-800 leading-snug pt-1">
+                  {q.Question}
+                </h3>
+              </div>
+
+              {/* Options Layout */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 ml-0 md:ml-14">
+                {q.options.map((opt, index) => {
+                  const isText = opt.type === "text";
+                  
+                  return (
+                    <div 
+                      key={index} 
+                      className={`${isText ? "col-span-full" : "col-span-1"}`}
+                    >
+                      {opt.type === "checkbox" ? (
+                        /* Choice Card Style */
+                        <label 
+                          className={`relative flex items-center gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 active:scale-[0.98] ${
+                            q.answer === opt.option 
+                              ? 'border-blue-600 bg-blue-50/50 shadow-md ring-1 ring-blue-600' 
+                              : 'border-gray-100 bg-gray-50 hover:border-blue-200 hover:bg-white hover:shadow-sm'
+                          }`}
+                        >
+                          <div className="relative flex items-center justify-center">
+                            <input
+                              type="checkbox"
+                              className="peer h-6 w-6 cursor-pointer appearance-none rounded-full border-2 border-gray-300 checked:border-blue-600 checked:bg-blue-600 transition-all"
+                              checked={q.answer === opt.option}
+                              onChange={(e) => {
+                                const val = e.target.checked ? opt.option : '';
+                                handleInputChange(q.id, val, 'checkbox');
+                              }}
+                            />
+                            {/* Custom checkmark icon */}
+                            <svg className="absolute w-4 h-4 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                          <span className="text-lg font-semibold text-gray-700">{opt.option}</span>
+                        </label>
+                      ) : (
+                        /* Premium Input Field */
+                        <div className="mt-2 group/input">
+                          <label className="text-sm font-bold text-blue-600/70 block mb-2 uppercase tracking-wider ml-1">
+                            {opt.option}
+                          </label>
+                          <textarea
+                            placeholder="तपाईँको जवाफ यहाँ लेख्नुहोस्..."
+                            className="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all min-h-[100px] text-lg text-gray-800 placeholder:text-gray-400"
+                            value={typeof q.answer === 'object' ? (q.answer[opt.option] || "") : ""}
+                            onChange={(e) => handleInputChange(q.id, e.target.value, 'text', opt.option)}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

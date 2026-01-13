@@ -30,7 +30,7 @@ const AdminDashboard = () => {
     onSuccess: () => {
       queryClient.clear();
       // Using the specific URL you provided
-      window.location.href = 'https://surveyfrontend-five.vercel.app/#/login'; 
+navigate('/login') 
     }
   });
 
