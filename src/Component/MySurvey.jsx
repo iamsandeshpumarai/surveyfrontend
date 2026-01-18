@@ -1,24 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../utils/api';
 import UserHeader from './UserHeader';
 import { 
   User, MapPin, Calendar, Briefcase, Phone, 
-  ClipboardList, AlertCircle, Loader2, CheckCircle2, ChevronRight 
+  ClipboardList, AlertCircle, Loader2, CheckCircle2, X 
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const MySurveys = () => {
-  const { data, isLoading, isError } = useQuery({
+  // Track which survey is selected for the popup
+  const [selectedSurvey, setSelectedSurvey] = useState(null);
+
+  const { data: userDataArray, isLoading, isError } = useQuery({
     queryKey: ['mySurveyData'],
     queryFn: async () => {
       const response = await api.get('/api/survey/getsurvey');
-      // Adjust this based on your API response structure
       return response.data.userData; 
     },
   });
 
-  // 1. LOADING STATE
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -30,26 +31,14 @@ const MySurveys = () => {
     );
   }
 
-  // 2. ERROR / EMPTY STATE (फारम भरिएको छैन)
-  if (isError || !data) {
+  if (isError || !userDataArray || userDataArray.length === 0) {
     return (
       <div className="min-h-screen bg-slate-50">
         <UserHeader />
-        <div className="max-w-xl mx-auto mt-20 p-8 text-center bg-white rounded-3xl shadow-xl border border-slate-100">
-          <div className="w-20 h-20 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-6">
-            <AlertCircle size={40} />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-800 mb-2">तपाईँको फारम भरिएको छैन</h2>
-          <p className="text-slate-500 mb-8">
-            तपाईँले अहिलेसम्म कुनै पनि सर्वेक्षण फारम भर्नुभएको छैन। कृपया सर्वेक्षण पुरा गर्नुहोस्।
-          </p>
-          <Link 
-            to="/userdashboard" 
-            className="inline-flex items-center gap-2 bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
-          >
-            <ClipboardList size={18} />
-            फारम भर्नुहोस्
-          </Link>
+        <div className="max-w-xl mx-auto mt-20 p-8 text-center bg-white rounded-3xl shadow-xl">
+          <AlertCircle className="text-orange-500 mx-auto mb-4" size={50} />
+          <h2 className="text-2xl font-bold text-slate-800 mb-2">डाटा फेला परेन</h2>
+          <Link to="/userdashboard" className="text-blue-600 font-bold underline">फारम भर्नुहोस्</Link>
         </div>
       </div>
     );
@@ -59,90 +48,145 @@ const MySurveys = () => {
     <div className="min-h-screen bg-slate-50 pb-20">
       <UserHeader />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-        {/* TOP SECTION: User Info Card */}
-        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 mb-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center">
-                <User size={32} />
-              </div>
-              <div>
-                <h1 className="text-2xl font-black text-slate-900">{data.name}</h1>
-                <p className="text-slate-500 flex items-center gap-1 font-medium">
-                  ID: {data.userId?.slice(-6).toUpperCase()} • {data.date}
-                </p>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 md:gap-8 border-t md:border-t-0 pt-4 md:pt-0">
-              <QuickInfo label="वार्ड" value={data.wardNumber} icon={<MapPin size={14}/>} />
-              <QuickInfo label="उमेर" value={data.age} icon={<Calendar size={14}/>} />
-              <QuickInfo label="पेशा" value={data.currentJob} icon={<Briefcase size={14}/>} />
-              <QuickInfo label="फोन" value={data.phoneNumber} icon={<Phone size={14}/>} />
-            </div>
-          </div>
+      <main className="max-w-7xl mx-auto px-4 mt-8">
+        <div className="mb-8">
+          <h2 className="text-3xl font-black text-slate-800">मेरो सर्वेक्षणहरू</h2>
+          <p className="text-slate-500 font-medium">सबै पेश गरिएका विवरणहरू</p>
         </div>
 
-        {/* SURVEYS GRID (Survey 1, 2, 3) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {data.surveys.map((survey, sIdx) => (
-            <div key={survey._id} className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
-              {/* Survey Header */}
-              <div className="bg-slate-900 p-5 flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                   <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center text-white font-bold text-sm">
-                    {sIdx + 1}
-                   </div>
-                   <h3 className="text-white font-bold tracking-wide">
-                     {survey.surveyKey === 'Survey1' ? 'विकास सम्बन्धी' : 'राजनीतिक शल्यक्रिया'}
-                   </h3>
-                </div>
-                <span className="text-[10px] bg-slate-700 text-slate-300 px-2 py-1 rounded uppercase font-bold">
-                  Ver {survey.surveyVersion}
-                </span>
-              </div>
+        {/* LIST VIEW (Table style) */}
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-slate-50 border-b border-slate-100">
+                <tr>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">नाम</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">वार्ड / उमेर</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">पेशा / फोन</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">मिति</th>
+                  <th className="px-6 py-4 text-right text-[10px] font-black uppercase text-slate-400">कार्य</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {userDataArray.map((submission) => (
+                  <tr key={submission._id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <p className="font-bold text-slate-800">{submission.name}</p>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-600">
+                      वार्ड: {submission.wardNumber} <br/> उमेर: {submission.age}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-600">
+                      {submission.currentJob} <br/> {submission.phoneNumber}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-500">{submission.date}</td>
+                    <td className="px-6 py-4 text-right">
+                      <button 
+                        onClick={() => setSelectedSurvey(submission)}
+                        className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-blue-700 shadow-md transition-all"
+                      >
+                        विवरण हेर्नुहोस्
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
 
-              {/* Answers List */}
-              <div className="p-2 flex-1">
-                {survey.answers.map((item, index) => (
-                  <div key={item._id} className="p-4 hover:bg-slate-50 rounded-2xl transition-all group">
-                    <div className="flex gap-4">
-                      <div className="flex-shrink-0 mt-1">
-                        <CheckCircle2 size={18} className="text-blue-500" />
-                      </div>
-                      <div>
-                        <p className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">
-                          प्रश्न {index + 1}
-                        </p>
-                        <h4 className="text-slate-800 font-medium leading-relaxed mb-3">
-                          {item.questionText}
-                        </h4>
-                        <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl border border-emerald-100">
-                          <span className="text-xs font-bold">उत्तर:</span>
-                          <span className="font-bold">{item.answer || '—'}</span>
+      {/* POP-UP MODAL WINDOW */}
+      {selectedSurvey && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          {/* Overlay background */}
+          <div 
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+            onClick={() => setSelectedSurvey(null)}
+          ></div>
+
+          {/* Modal Content - EXTRA WIDE */}
+          <div className="relative bg-white w-full max-w-6xl max-h-[90vh] rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            
+            {/* Modal Header */}
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center">
+                  <User size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-slate-800">{selectedSurvey.name}</h3>
+                  <p className="text-xs font-bold text-slate-500 uppercase">पूरा सर्वेक्षण विवरण • {selectedSurvey.date}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedSurvey(null)}
+                className="p-2 hover:bg-slate-200 rounded-full text-slate-500 transition-colors"
+              >
+                <X size={28} />
+              </button>
+            </div>
+
+            {/* Scrollable Survey Data */}
+            <div className="p-8 overflow-y-auto custom-scrollbar bg-white">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
+                {selectedSurvey.surveys?.map((survey, sIdx) => (
+                  <div key={sIdx} className="space-y-6">
+                    <div className="flex items-center gap-3 border-b-2 border-blue-600 pb-2">
+                      <span className="bg-blue-600 text-white w-8 h-8 rounded-lg flex items-center justify-center font-bold">
+                        {sIdx + 1}
+                      </span>
+                      <h4 className="text-lg font-black text-slate-800 uppercase tracking-tight">
+                        {survey.surveyKey === 'Survey1' ? 'विकास सम्बन्धी' : 'राजनीतिक शल्यक्रिया'}
+                      </h4>
+                    </div>
+
+                    <div className="space-y-4">
+                      {survey.answers.map((item, index) => (
+                        <div key={index} className="group">
+                          <h5 className="text-slate-600 font-bold text-sm mb-2 flex gap-2">
+                            <span className="text-blue-400">Q{index + 1}.</span> {item.questionText}
+                          </h5>
+                          
+                          <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 group-hover:border-blue-200 transition-colors">
+                            {typeof item.answer === 'object' ? (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {Object.entries(item.answer).map(([q, a], i) => (
+                                  <div key={i} className="bg-white p-3 rounded-xl border border-slate-100">
+                                    <p className="text-[10px] text-blue-500 font-black uppercase mb-1">{q || 'विवरण'}</p>
+                                    <p className="text-sm font-bold text-slate-800">{a || '—'}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-base font-black text-slate-900 flex items-center gap-2">
+                                <CheckCircle2 size={16} className="text-emerald-500" />
+                                {item.answer || '—'}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                      </div>
+                      ))}
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-          ))}
+
+            {/* Modal Footer */}
+            <div className="p-6 bg-slate-50 border-t border-slate-100 text-right">
+              <button 
+                onClick={() => setSelectedSurvey(null)}
+                className="bg-slate-800 text-white px-8 py-3 rounded-2xl font-bold hover:bg-slate-900 transition-all"
+              >
+                बन्द गर्नुहोस्
+              </button>
+            </div>
+          </div>
         </div>
-      </main>
+      )}
     </div>
   );
 };
-
-// Helper component for the user info header
-const QuickInfo = ({ label, value, icon }) => (
-  <div className="flex flex-col">
-    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1 flex items-center gap-1">
-      {icon} {label}
-    </span>
-    <span className="text-slate-700 font-bold text-sm truncate max-w-[100px]">{value || 'N/A'}</span>
-  </div>
-);
 
 export default MySurveys;

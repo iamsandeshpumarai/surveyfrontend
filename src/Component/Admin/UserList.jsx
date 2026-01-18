@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Trash2, Eye, X, UserCheck, Mail, Loader2, AlertCircle, ClipboardCheck, ChevronRight } from 'lucide-react';
 import api from '../../utils/api';
 
-const AdminSurveyList = () => {
+const UserList = () => {
   const queryClient = useQueryClient();
   const [selectedUserId, setSelectedUserId] = useState(null);
 
@@ -201,4 +201,4 @@ const AdminSurveyList = () => {
   );
 };
 
-export default AdminSurveyList;
+export default UserList;

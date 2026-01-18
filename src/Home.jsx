@@ -4,10 +4,10 @@ import SurveyMetaForm from './Component/HeaderMetaForm';
 import ResponsiveVoterTable from './Component/ResponsiveVoterTable';
 import { useMutation } from '@tanstack/react-query';
 import api from './utils/api';
-import DevelopmentSurvey from './Component/ResuableComponent/DevelopmentSurvey'; 
 import { useAuth } from './Component/Context/ContextDataprovider';
 import UserHeader from './Component/UserHeader';
 import dataSurvey from './utils/data';
+import Survey from './Component/ResuableComponent/Survey';
 
 const Home = () => {
   const { user } = useAuth();
@@ -120,7 +120,7 @@ const Home = () => {
       </div>
 
       {/* --- IMPORTANT: Re-added the Survey Questions Component --- */}
-      <DevelopmentSurvey 
+      <Survey 
         dispatch={surveyDispatch} 
         DevData={surveyState[activeSurvey]} 
         section={activeSurvey} 

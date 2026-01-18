@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, User, Mail, Lock, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, User, Mail, Lock, ArrowRight, ClipboardList } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
@@ -15,28 +15,23 @@ const LoginPage = () => {
     password: ''
   });
 
-  // --- TANSTACK QUERY MUTATION ---
   const authMutation = useMutation({
     mutationFn: async (userData) => {
-      // Dynamically pick the endpoint based on isLogin state
       const endpoint = isLogin ? 'api/admin/loginuser' : 'api/admin/registeruser';
       const response = await api.post(endpoint, userData);
       return response.data;
     },
     onSuccess: (data) => {
-      // 1. Tell React Query to check the auth status again
       queryClient.invalidateQueries(['checkauth']);
-      
-      // 2. Role-based navigation
       const roles = data.user?.role || [];
       if (roles.includes('admin')) {
-        navigate('/admindashboard');
+        navigate('/admin');
       } else {
         navigate('/userdashboard');
       }
     },
     onError: (error) => {
-      alert(error.response?.data?.message || "Something went wrong");
+      alert(error.response?.data?.message || "प्रविष्टिमा समस्या देखियो। कृपया फेरि प्रयास गर्नुहोला।");
     }
   });
 
@@ -46,50 +41,64 @@ const LoginPage = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Trigger the mutation with form data
     authMutation.mutate(formData);
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-[1000px] flex rounded-3xl shadow-2xl overflow-hidden min-h-[600px]">
+    <div className="min-h-screen bg-[#f3f4f6] flex items-center justify-center p-4 font-sans">
+      <div className="bg-white w-full max-w-[1100px] flex rounded-3xl shadow-2xl overflow-hidden min-h-[650px] border border-slate-100">
         
-        {/* Left Side (Blue Branding) */}
-        <div className="hidden lg:flex w-1/2 bg-blue-600 p-12 flex-col justify-between text-white">
-          <div>
-            <h1 className="text-4xl font-bold mb-4">Survey Portal</h1>
-            <p className="text-blue-100 text-lg">
-              {isLogin 
-                ? "Welcome back! Access your dashboard and manage your surveys." 
-                : "Join us today and start gathering impactful data across the region."}
+        {/* Left Side (Context & Branding) */}
+        <div className="hidden lg:flex w-5/12 bg-[#1e293b] p-12 flex-col justify-between text-white relative">
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-6">
+               <ClipboardList className="text-indigo-400" size={32} />
+               <span className="text-sm font-semibold tracking-widest uppercase text-indigo-300">Political Survey 2081</span>
+            </div>
+            <h1 className="text-3xl font-bold mb-4 leading-tight">
+              सिन्धुपाल्चोक निर्वाचन क्षेत्र १ <br/>
+              <span className="text-indigo-400">राजनीतिक शल्यकृया</span>
+            </h1>
+            <div className="h-1 w-20 bg-indigo-500 mb-6"></div>
+            <p className="text-slate-300 text-sm leading-relaxed mb-4">
+              जुगल, भोटेकोशी, त्रिपुरासुन्दरी, लिसङ्खुपाखर, सुनकोशी, बलेफी, बाह्रबिसे र चौतारा साँगाचोकगढी (२-४, ९, १०) समेटिएको बृहत् सर्वेक्षण।
             </p>
           </div>
-          <div className="bg-blue-500/30 p-6 rounded-2xl backdrop-blur-sm border border-blue-400/30">
-            <p className="italic text-sm">"Data is a precious thing and will last longer than the systems themselves."</p>
+
+          <div className="relative z-10 bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
+            <p className="text-xs text-slate-400 uppercase tracking-wider mb-2 font-bold">अनुसन्धान नैतिकता</p>
+            <p className="italic text-sm text-slate-200">
+              "यस अनुसन्धानमा तपाईंको नाम गोप्य वा खुला राख्न सकिनेछ। प्राप्त तथ्याङ्क केवल विश्लेषणका लागि प्रयोग गरिनेछ।"
+            </p>
           </div>
+
+          {/* Abstract background element */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full -mr-16 -mt-16 blur-3xl"></div>
         </div>
 
         {/* Right Side (Form) */}
-        <div className="w-full lg:w-1/2 p-8 md:p-12 flex flex-col justify-center">
-          <div className="mb-10">
-            <h2 className="text-3xl font-bold text-slate-800">
-              {isLogin ? "Sign In" : "Create Account"}
+        <div className="w-full lg:w-7/12 p-8 md:p-16 flex flex-col justify-center">
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-slate-800">
+              {isLogin ? "सर्वेक्षक लग-इन" : "नयाँ खाता सिर्जना गर्नुहोस्"}
             </h2>
+            <p className="text-slate-500 text-sm mt-2">
+              {isLogin ? "अगाडि बढ्न आफ्नो विवरण भर्नुहोस्।" : "सर्वेक्षण प्रणालीमा जोडिन फारम भर्नुहोस्।"}
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Show Username field ONLY during Signup */}
+          <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
               <div className="space-y-1">
-                <label className="text-sm font-semibold text-slate-700 ml-1">Username</label>
+                <label className="text-xs font-bold text-slate-600 uppercase ml-1">नाम (Full Name)</label>
                 <div className="relative group">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                   <input 
                     type="text" 
                     name="username"
                     required
-                    className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500"
-                    placeholder="Enter username"
+                    className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                    placeholder="Enter full name"
                     onChange={handleChange}
                   />
                 </div>
@@ -97,38 +106,38 @@ const LoginPage = () => {
             )}
 
             <div className="space-y-1">
-              <label className="text-sm font-semibold text-slate-700 ml-1">Email Address</label>
+              <label className="text-xs font-bold text-slate-600 uppercase ml-1">इमेल (Email)</label>
               <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                 <input 
                   type="email" 
                   name="email"
                   required
-                  className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500"
-                  placeholder="name@company.com"
+                  className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                  placeholder="name@email.com"
                   onChange={handleChange}
                 />
               </div>
             </div>
 
             <div className="space-y-1">
-              <label className="text-sm font-semibold text-slate-700 ml-1">Password</label>
+              <label className="text-xs font-bold text-slate-600 uppercase ml-1">पासवर्ड (Password)</label>
               <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                 <input 
                   type={showPassword ? "text" : "password"} 
                   name="password"
                   required
-                  className="w-full pl-12 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500"
+                  className="w-full pl-12 pr-12 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                   placeholder="••••••••"
                   onChange={handleChange}
                 />
                 <button 
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition-colors"
                 >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>
@@ -136,23 +145,23 @@ const LoginPage = () => {
             <button 
               type="submit"
               disabled={authMutation.isPending}
-              className={`w-full py-4 rounded-xl text-white font-bold flex items-center justify-center gap-2 transition-all ${
-                authMutation.isPending ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+              className={`w-full py-4 mt-4 rounded-xl text-white font-bold flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 transition-all ${
+                authMutation.isPending ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98]'
               }`}
             >
-              {authMutation.isPending ? "Processing..." : isLogin ? "Login Now" : "Register Now"}
+              {authMutation.isPending ? "प्रक्रियामा छ..." : isLogin ? "लग-इन गर्नुहोस्" : "दर्ता गर्नुहोस्"}
               <ArrowRight size={20} />
             </button>
           </form>
 
-          <div className="mt-8 text-center">
-            <p className="text-slate-600">
-              {isLogin ? "Don't have an account?" : "Already have an account?"} 
+          <div className="mt-10 pt-6 border-t border-slate-100 text-center">
+            <p className="text-slate-600 text-sm">
+              {isLogin ? "नयाँ प्रयोगकर्ता हुनुहुन्छ?" : "पहिले नै खाता छ?"} 
               <button 
                 onClick={() => setIsLogin(!isLogin)}
-                className="ml-2 font-bold text-blue-600 hover:underline"
+                className="ml-2 font-bold text-indigo-600 hover:text-indigo-800 underline-offset-4 hover:underline"
               >
-                {isLogin ? "Sign Up" : "Log In"}
+                {isLogin ? "खाता बनाउनुहोस्" : "लग-इन गर्नुहोस्"}
               </button>
             </p>
           </div>

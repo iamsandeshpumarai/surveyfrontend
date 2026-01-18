@@ -1,6 +1,6 @@
 import React from 'react';
 
-const DevelopmentSurvey = ({ DevData, dispatch, section }) => {
+const Survey = ({ DevData, dispatch, section }) => {
   
   const handleInputChange = (questionId, value, type, optionLabel = null) => {
     dispatch({
@@ -103,4 +103,4 @@ const DevelopmentSurvey = ({ DevData, dispatch, section }) => {
   );
 };
 
-export default DevelopmentSurvey;
+export default Survey;

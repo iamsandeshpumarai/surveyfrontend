@@ -15,17 +15,14 @@ const UserHeader = () => {
   const handleLogout = useMutation({
   mutationFn: () => api.post('api/admin/logout'),
   onSuccess: () => {
-    // 1. Clear the TanStack Query cache
-    queryClient.clear();
-navigate('/login')
-    // 2. Force a full browser reload and redirect
-    // This is better than navigate() for logouts because it 
-    // clears all React state completely.
+    navigate('/login')
+queryClient.invalidateQueries({
+  queryKey:['checkauth']
+})
     
   },
   onError: () => {
-    // If the server fails, we still want to kick them out locally
-    // ;
+    
     navigate('/login')
   }
 });
@@ -72,11 +69,7 @@ navigate('/login')
 
           {/* Right Side: Icons & Profile */}
           <div className="flex items-center gap-2 sm:gap-4">
-            <button className="p-2 text-slate-400 hover:text-blue-600 transition-colors relative">
-              <Bell size={20} />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-            </button>
-
+            
             <div className="h-8 w-[1px] bg-slate-200 mx-1 hidden sm:block"></div>
 
             <div className="flex items-center gap-3">
@@ -127,7 +120,7 @@ navigate('/login')
               </Link>
             ))}
             <button
-              onClick={handleLogout}
+              onClick={handleLogout.mutate()}
               className="w-full flex items-center gap-3 px-3 py-3 rounded-md text-base font-medium text-red-600 hover:bg-red-50"
             >
               <LogOut size={18} />
