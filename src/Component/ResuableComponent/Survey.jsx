@@ -13,7 +13,7 @@ const Survey = ({ DevData, dispatch, section }) => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto my-6 md:my-10 p-0 md:p-2">
+    <div className="max-w-7xl mx-auto my-6 md:my-10 p-0 md:p-2">
       {/* Survey Card Container */}
       <div className="bg-white shadow-2xl rounded-3xl border border-gray-100 overflow-hidden">
         

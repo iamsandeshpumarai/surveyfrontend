@@ -554,16 +554,7 @@ const dataSurvey = {
             ],
           answer: "",
         },
-        {
-          id: "q32",
-          Question: "सोध्न बाँकी रहेको तर तपाइलाई भन्न मन लागेको केहि भए उल्लेख गर्नुहोस ।",
-          options: [
-            { type: "text", option: "" },
-            
-            
-            ],
-          answer: "",
-        },
+      
       ],
     },
   };

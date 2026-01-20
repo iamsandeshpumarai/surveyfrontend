@@ -4,9 +4,9 @@ import { LogOut, User, Menu, X, LayoutDashboard, ClipboardList, Settings, Bell }
 import api from '../utils/api';
 import { useAuth } from './Context/ContextDataprovider';
 import { useMutation } from '@tanstack/react-query';
-import { useQueryClient } from '@tanstack/react-query';
+
 const UserHeader = () => {
-    const queryClient = useQueryClient();
+    
   const { user } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
@@ -15,10 +15,8 @@ const UserHeader = () => {
   const handleLogout = useMutation({
   mutationFn: () => api.post('api/admin/logout'),
   onSuccess: () => {
-    navigate('/login')
-queryClient.invalidateQueries({
-  queryKey:['checkauth']
-})
+window.location.reload();
+
     
   },
   onError: () => {

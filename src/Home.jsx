@@ -1,4 +1,4 @@
-import React, { useReducer, useState } from 'react';
+import React, { memo, useReducer, useState } from 'react';
 import SurveyHeader from './Component/SurveyHeader';
 import SurveyMetaForm from './Component/HeaderMetaForm';
 import ResponsiveVoterTable from './Component/ResponsiveVoterTable';
@@ -8,6 +8,8 @@ import { useAuth } from './Component/Context/ContextDataprovider';
 import UserHeader from './Component/UserHeader';
 import dataSurvey from './utils/data';
 import Survey from './Component/ResuableComponent/Survey';
+import toast from 'react-hot-toast';
+
 
 const Home = () => {
   const { user } = useAuth();
@@ -41,7 +43,7 @@ const Home = () => {
 
   // --- Survey Reducer Logic ---
   const surveyReducer = (state, action) => {
-    console.log(state)
+
     const { section, questionId, value, type, optionLabel } = action;
     const currentSection = state[section];
 
@@ -80,6 +82,12 @@ const Home = () => {
     mutationFn: async (data) => {
       await api.post('/api/survey/createsurvey', { data });
     },
+    onSuccess:function(){
+toast.success("Survey Saved Successfully")
+    },
+    onError:function(err){
+      toast.error(err?.response?.data?.message || "Failed to save survey")
+    }
   });
 
   const handleSubmit = () => {
@@ -162,4 +170,4 @@ const Home = () => {
   );
 };
 
-export default Home;
+export default memo(Home);

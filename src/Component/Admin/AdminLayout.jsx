@@ -13,20 +13,22 @@ import {
 } from 'lucide-react';
 import { Link, useNavigate, Outlet } from 'react-router-dom';
 import api from '../../utils/api';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 const AdminLayout = () => {
-    const queryClient  = useQueryClient()
+    
 const navigate = useNavigate()
     const logout = useMutation({
     mutationFn:async function(){
         await api.post('/api/admin/logout')
-    },
-   onSuccess: () => {
+        
+      },
+      onSuccess: () => {
+     window.location.reload();
     // 1. Clear ALL cached data (very important for security)
-    queryClient.clear(); 
+    
     
     // 2. Redirect to login
-    navigate('/login', { replace: true });
+    
 
     // 3. Optional: If you use a window-level reload to be 100% sure
     // window.location.href = '/login'; 
@@ -43,9 +45,9 @@ const navigate = useNavigate()
   const menuItems = [
     { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/admin' },
     { name: 'Survey Stats', icon: <BarChart3 size={20} />, path: '/admin/stats' },
-    { name: 'Manage Surveys', icon: <ClipboardList size={20} />, path: '/admin/surveys' },
+    // { name: 'Manage Surveys', icon: <ClipboardList size={20} />, path: '/admin/surveys' },
     { name: 'Users List', icon: <Users size={20} />, path: '/admin/users' },
-    { name: 'Settings', icon: <Settings size={20} />, path: '/admin/setting' },
+    // { name: 'Settings', icon: <Settings size={20} />, path: '/admin/setting' },
   ];
 
   return (
