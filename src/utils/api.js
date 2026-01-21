@@ -1,8 +1,8 @@
 import axios from 'axios'
 
 const api = axios.create({
-    // baseURL:"https://surveybackend-erv4.onrender.com/",
-    baseURL:"http://localhost:5001",
+    baseURL:"https://surveybackend-erv4.onrender.com/",
+    // baseURL:"http://localhost:5001",
     withCredentials:true
 
 })
