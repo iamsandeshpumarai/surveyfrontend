@@ -1,36 +1,29 @@
 import React, { useState, useMemo } from 'react';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { ChevronDown, ChevronRight, BarChart3 } from 'lucide-react';
+import { ChevronDown, Users, Filter, X, BarChart3, PieChartIcon, Table2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../utils/api';
-import Loading from '../Loading/Loading';
 
-// Mock data - replace with actual useQuery hook
+// Mock data hook - replace with your actual useQuery
 const useSurveyData = () => {
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['surveydata'],
-    queryFn: async () => {
-      // 1. Added leading slash for consistent routing
-      const response = await api.get('/api/survey/getsurvey');
+  // Your actual implementation here
 
-      // 2. Axios wraps the backend response in a .data object
-      return response.data.userData;
-    },
-    // Retries 3 times by default; set to false if you want immediate error reporting
-    retry: 1,
-  });
+
+  const mockData = []; // Replace with actual data
   
+const {data:realData,isLoading,error} =   useQuery({
+    queryKey:['surveyData'],
+    queryFn: async()=>{
+      const data =  await api.get('/api/survey/getsurvey');
+      return data.data.userData
+    }
+  })
 
-  // Log the actual data for debugging
-
-
-  // If data is loading or errored, we return accordingly.
-  // Otherwise, we return the API data.
   return {
-    data: data || [], // Fallback to empty array to prevent .map errors
-    isLoading,
-    isError,
-    error
+    data: realData || mockData,
+    isLoading: false,
+    isError: false,
+    error: null
   };
 };
 
@@ -38,17 +31,41 @@ const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'
 
 const SurveyAnalyticsDashboard = () => {
   const { data: surveys, isLoading } = useSurveyData();
-
+ 
   const [selectedSurvey, setSelectedSurvey] = useState(null);
   const [selectedQuestion, setSelectedQuestion] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
-  const [viewMode, setViewMode] = useState('bar'); // 'bar', 'pie', '
-  
+  const [viewMode, setViewMode] = useState('bar');
+  const [selectedWard, setSelectedWard] = useState('all');
+
+  // Get unique wards
+  const uniqueWards = useMemo(() => {
+    if (!surveys) return [];
+    const wards = new Set();
+    surveys?.forEach(response => {
+      if (response.wardNumber) {
+        wards.add(response.wardNumber);
+      }
+    });
+    return ['all', ...Array.from(wards).sort((a, b) => {
+      const numA = parseInt(a) || 0;
+      const numB = parseInt(b) || 0;
+      return numA - numB;
+    })];
+  }, [surveys]);
+
+  // Filter surveys by ward
+  const filteredSurveys = useMemo(() => {
+    if (!surveys) return [];
+    if (selectedWard === 'all') return surveys;
+    return surveys.filter(s => s.wardNumber === selectedWard);
+  }, [surveys, selectedWard]);
+
   // Get unique surveys
   const uniqueSurveys = useMemo(() => {
-    if (!surveys) return [];
+    if (!filteredSurveys) return [];
     const surveyMap = new Map();
-    surveys.forEach(response => {
+    filteredSurveys.forEach(response => {
       response.surveys?.forEach(survey => {
         if (!surveyMap.has(survey.surveyKey)) {
           surveyMap.set(survey.surveyKey, {
@@ -60,22 +77,17 @@ const SurveyAnalyticsDashboard = () => {
       });
     });
     return Array.from(surveyMap.values());
-  }, [surveys]);
-
-  
+  }, [filteredSurveys]);
 
   // Get questions for selected survey
   const questions = useMemo(() => {
-    if (!selectedSurvey || !surveys) return [];
+    if (!selectedSurvey || !filteredSurveys) return [];
     const questionMap = new Map();
 
-    surveys.forEach(response => {
+    filteredSurveys.forEach(response => {
       const survey = response.surveys?.find(s => s.surveyKey === selectedSurvey.key);
       survey?.answers?.forEach(ans => {
         if (!questionMap.has(ans.questionId)) {
-          // Check if answer is an object (multi-part text question)
-          // Multi-part = object with keys (text type questions)
-          // Single = string (checkbox type questions)
           const isMultiPart = typeof ans.answer === 'object' &&
             ans.answer !== null &&
             !Array.isArray(ans.answer) &&
@@ -88,7 +100,6 @@ const SurveyAnalyticsDashboard = () => {
             subQuestions: isMultiPart ? Object.keys(ans.answer).filter(k => k !== '') : []
           });
         } else {
-          // Update subQuestions if we find new ones
           const existing = questionMap.get(ans.questionId);
           if (existing.isMultiPart && typeof ans.answer === 'object' && ans.answer !== null) {
             const newSubQuestions = Object.keys(ans.answer).filter(k => k !== '');
@@ -103,15 +114,12 @@ const SurveyAnalyticsDashboard = () => {
     });
 
     return Array.from(questionMap.values());
-  }, [selectedSurvey, surveys]);
+  }, [selectedSurvey, filteredSurveys]);
 
-  console.log(questions, "questions for the selected survey")
-
-  // Analyze answers for selected question
+  // Analyze answers with top 5 + others grouping
   const answerAnalysis = useMemo(() => {
-    if (!selectedQuestion || !selectedSurvey || !surveys) return null;
+    if (!selectedQuestion || !selectedSurvey || !filteredSurveys) return null;
 
-    // For multi-part questions, analyze each sub-question separately
     if (selectedQuestion.isMultiPart) {
       const subQuestionAnalysis = {};
 
@@ -119,7 +127,7 @@ const SurveyAnalyticsDashboard = () => {
         const answerCounts = new Map();
         const respondentsByAnswer = new Map();
 
-        surveys.forEach(response => {
+        filteredSurveys.forEach(response => {
           const survey = response.surveys?.find(s => s.surveyKey === selectedSurvey.key);
           const answer = survey?.answers?.find(a => a.questionId === selectedQuestion.id);
 
@@ -147,35 +155,28 @@ const SurveyAnalyticsDashboard = () => {
           }
         });
 
-        // Sort by count and take top 7, group rest as "Other"
         const sortedAnswers = Array.from(answerCounts.entries())
           .sort((a, b) => b[1] - a[1]);
 
-        const topAnswers = sortedAnswers.slice(0, 7);
-        const otherAnswers = sortedAnswers.slice(7);
+        const topAnswers = sortedAnswers.slice(0, 5);
+        const otherAnswers = sortedAnswers.slice(5);
 
         let chartData = topAnswers.map(([answer, count]) => ({
-          answer: answer.length > 30 ? answer.substring(0, 30) + '...' : answer,
+          answer: answer.length > 40 ? answer.substring(0, 40) + '...' : answer,
           fullAnswer: answer,
           count,
-          percentage: ((count / surveys.length) * 100).toFixed(1),
+          percentage: ((count / filteredSurveys.length) * 100).toFixed(1),
           isOther: false
         }));
 
-        // Add "Other opinions" if there are more than 7 unique answers
         if (otherAnswers.length > 0) {
           const otherCount = otherAnswers.reduce((sum, [, count]) => sum + count, 0);
-          const otherRespondents = new Map();
-
-          otherAnswers.forEach(([answer]) => {
-            otherRespondents.set(answer, respondentsByAnswer.get(answer));
-          });
-
+          
           chartData.push({
-            answer: `Other opinions (${otherAnswers.length})`,
+            answer: `अन्य विचार (${otherAnswers.length})`,
             fullAnswer: 'Other opinions',
             count: otherCount,
-            percentage: ((otherCount / surveys.length) * 100).toFixed(1),
+            percentage: ((otherCount / filteredSurveys.length) * 100).toFixed(1),
             isOther: true,
             otherAnswers: otherAnswers.map(([ans, cnt]) => ({
               answer: ans,
@@ -191,13 +192,11 @@ const SurveyAnalyticsDashboard = () => {
       return { isMultiPart: true, subQuestionAnalysis };
     }
 
-    
-
-    // For single-choice questions (checkbox) - show all options
+    // Single-choice questions
     const answerCounts = new Map();
     const respondentsByAnswer = new Map();
 
-    surveys.forEach(response => {
+    filteredSurveys.forEach(response => {
       const survey = response.surveys?.find(s => s.surveyKey === selectedSurvey.key);
       const answer = survey?.answers?.find(a => a.questionId === selectedQuestion.id);
 
@@ -225,32 +224,74 @@ const SurveyAnalyticsDashboard = () => {
       }
     });
 
-    const chartData = Array.from(answerCounts.entries()).map(([answer, count]) => ({
-      answer: answer.length > 30 ? answer.substring(0, 30) + '...' : answer,
-      fullAnswer: answer,
-      count,
-      percentage: ((count / surveys.length) * 100).toFixed(1),
-      isOther: false
-    }));
+    const chartData = Array.from(answerCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([answer, count]) => ({
+        answer: answer.length > 40 ? answer.substring(0, 40) + '...' : answer,
+        fullAnswer: answer,
+        count,
+        percentage: ((count / filteredSurveys.length) * 100).toFixed(1),
+        isOther: false
+      }));
 
     return { isMultiPart: false, chartData, respondentsByAnswer };
-  }, [selectedQuestion, selectedSurvey, surveys]);
+  }, [selectedQuestion, selectedSurvey, filteredSurveys]);
 
   if (isLoading) {
-    return <Loading />
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 font-medium">Loading survey data...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Survey Analytics Dashboard</h1>
+        {/* Header */}
+        <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+                सर्वेक्षण विश्लेषण
+              </h1>
+              <p className="text-gray-600 flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Total Respondents: <span className="font-semibold text-blue-600">{filteredSurveys.length}</span>
+              </p>
+            </div>
+            
+            {/* Ward Filter */}
+            <div className="flex items-center gap-3">
+              <Filter className="w-5 h-5 text-gray-500" />
+              <select
+                value={selectedWard}
+                onChange={(e) => {
+                  setSelectedWard(e.target.value);
+                  setSelectedSurvey(null);
+                  setSelectedQuestion(null);
+                }}
+                className="px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none bg-white"
+              >
+                <option value="all">All Wards</option>
+                {uniqueWards.filter(w => w !== 'all').map(ward => (
+                  <option key={ward} value={ward}>Ward {ward}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
 
         {/* Survey and Question Selection */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Survey Dropdown */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" />
                 Select Survey
               </label>
               <select
@@ -261,12 +302,12 @@ const SurveyAnalyticsDashboard = () => {
                   setSelectedQuestion(null);
                   setSelectedAnswer(null);
                 }}
-                className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                className="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
               >
                 <option value="">-- Choose a Survey --</option>
                 {uniqueSurveys.map(survey => (
                   <option key={survey.key} value={survey.key}>
-                    {survey.key} - {survey.topic}
+                    {survey.topic}
                   </option>
                 ))}
               </select>
@@ -274,7 +315,8 @@ const SurveyAnalyticsDashboard = () => {
 
             {/* Question Dropdown */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <ChevronDown className="w-4 h-4" />
                 Select Question
               </label>
               <select
@@ -285,7 +327,7 @@ const SurveyAnalyticsDashboard = () => {
                   setSelectedAnswer(null);
                 }}
                 disabled={!selectedSurvey}
-                className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                className="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed transition-all"
               >
                 <option value="">-- Choose a Question --</option>
                 {questions.map(question => (
@@ -300,63 +342,87 @@ const SurveyAnalyticsDashboard = () => {
 
         {/* Answer Analysis */}
         {selectedQuestion && answerAnalysis && (
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
             <div className="mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">Analysis</h2>
-              <p className="text-gray-600 bg-blue-50 p-3 rounded border-l-4 border-blue-500">
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">Analysis Results</h2>
+              <p className="text-gray-700 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border-l-4 border-blue-500">
                 {selectedQuestion.text}
               </p>
+              {selectedWard !== 'all' && (
+                <p className="mt-2 text-sm text-gray-600">
+                  Filtered by: <span className="font-semibold text-blue-600">Ward {selectedWard}</span>
+                </p>
+              )}
             </div>
 
             {/* Multi-part Question Analysis */}
             {answerAnalysis.isMultiPart ? (
               <div className="space-y-8">
                 {Object.entries(answerAnalysis.subQuestionAnalysis).map(([subQuestion, analysis], idx) => (
-                  <div key={idx} className="border rounded-lg p-6 bg-gray-50">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">{subQuestion}</h3>
+                  <div key={idx} className="border-2 border-gray-200 rounded-xl p-6 bg-gradient-to-br from-gray-50 to-white">
+                    <h3 className="text-lg font-bold text-gray-800 mb-4 pb-3 border-b-2 border-gray-200">{subQuestion}</h3>
 
-                    {/* View Mode Toggle for each sub-question */}
-                    <div className="flex gap-2 mb-4">
+                    {/* View Mode Toggle */}
+                    <div className="flex flex-wrap gap-2 mb-6">
                       <button
                         onClick={() => setViewMode('bar')}
-                        className={`flex items-center gap-2 px-3 py-1 text-sm rounded ${viewMode === 'bar' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'
-                          }`}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                          viewMode === 'bar' 
+                            ? 'bg-blue-600 text-white shadow-md' 
+                            : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-blue-300'
+                        }`}
                       >
-                        <BarChart3 className="w-3 h-3" />
-                        Bar
+                        <BarChart3 className="w-4 h-4" />
+                        Bar Chart
                       </button>
                       <button
                         onClick={() => setViewMode('pie')}
-                        className={`flex items-center gap-2 px-3 py-1 text-sm rounded ${viewMode === 'pie' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'
-                          }`}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                          viewMode === 'pie' 
+                            ? 'bg-blue-600 text-white shadow-md' 
+                            : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-blue-300'
+                        }`}
                       >
-                        📊 Pie
+                        <PieChartIcon className="w-4 h-4" />
+                        Pie Chart
                       </button>
                       <button
                         onClick={() => setViewMode('table')}
-                        className={`flex items-center gap-2 px-3 py-1 text-sm rounded ${viewMode === 'table' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'
-                          }`}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                          viewMode === 'table' 
+                            ? 'bg-blue-600 text-white shadow-md' 
+                            : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-blue-300'
+                        }`}
                       >
-                        📋 Table
+                        <Table2 className="w-4 h-4" />
+                        Table
                       </button>
                     </div>
 
-                    {/* Visualization for sub-question */}
+                    {/* Visualization */}
                     {viewMode === 'bar' && (
-                      <ResponsiveContainer width="100%" height={Math.max(300, analysis.chartData.length * 60)}>
-                        <BarChart data={analysis.chartData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="answer" angle={-45} textAnchor="end" height={80} />
-                          <YAxis
-                            label={{ value: 'Number of Responses', angle: -90, position: 'insideLeft' }}
-                            tickFormatter={(value) => value.toLocaleString()}
+                      <ResponsiveContainer width="100%" height={Math.max(350, analysis.chartData.length * 70)}>
+                        <BarChart data={analysis.chartData} layout="horizontal">
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                          <XAxis 
+                            dataKey="answer" 
+                            angle={-45} 
+                            textAnchor="end" 
+                            height={120}
+                            tick={{ fontSize: 12 }}
                           />
-                          <Tooltip
-                            formatter={(value) => [value.toLocaleString() + ' responses', 'Count']}
+                          <YAxis 
+                            label={{ value: 'Responses', angle: -90, position: 'insideLeft' }}
+                            tick={{ fontSize: 12 }}
                           />
-                          <Bar
-                            dataKey="count"
-                            fill="#3B82F6"
+                          <Tooltip 
+                            contentStyle={{ borderRadius: '8px', border: '2px solid #e5e7eb' }}
+                            formatter={(value) => [`${value} responses (${((value/filteredSurveys.length)*100).toFixed(1)}%)`, 'Count']}
+                          />
+                          <Bar 
+                            dataKey="count" 
+                            fill="#3B82F6" 
+                            radius={[8, 8, 0, 0]}
                             onClick={(data) => {
                               if (data.isOther) {
                                 setSelectedAnswer({
@@ -374,13 +440,14 @@ const SurveyAnalyticsDashboard = () => {
                                 });
                               }
                             }}
+                            style={{ cursor: 'pointer' }}
                           />
                         </BarChart>
                       </ResponsiveContainer>
                     )}
 
                     {viewMode === 'pie' && (
-                      <ResponsiveContainer width="100%" height={300}>
+                      <ResponsiveContainer width="100%" height={400}>
                         <PieChart>
                           <Pie
                             data={analysis.chartData}
@@ -388,8 +455,8 @@ const SurveyAnalyticsDashboard = () => {
                             nameKey="answer"
                             cx="50%"
                             cy="50%"
-                            outerRadius={80}
-                            label={(entry) => `${entry.answer} (${entry.percentage}%)`}
+                            outerRadius={120}
+                            label={(entry) => `${entry.percentage}%`}
                             onClick={(data) => {
                               if (data.isOther) {
                                 setSelectedAnswer({
@@ -407,34 +474,40 @@ const SurveyAnalyticsDashboard = () => {
                                 });
                               }
                             }}
+                            style={{ cursor: 'pointer' }}
                           >
                             {analysis.chartData.map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                             ))}
                           </Pie>
                           <Tooltip />
+                          <Legend />
                         </PieChart>
                       </ResponsiveContainer>
                     )}
 
                     {viewMode === 'table' && (
-                      <div className="overflow-x-auto">
-                        <table className="w-full border-collapse bg-white">
+                      <div className="overflow-x-auto rounded-lg border-2 border-gray-200">
+                        <table className="w-full">
                           <thead>
-                            <tr className="bg-gray-100">
-                              <th className="border p-2 text-left">Answer</th>
-                              <th className="border p-2 text-center">Count</th>
-                              <th className="border p-2 text-center">Percentage</th>
-                              <th className="border p-2 text-center">Action</th>
+                            <tr className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+                              <th className="p-4 text-left font-semibold">Answer</th>
+                              <th className="p-4 text-center font-semibold">Count</th>
+                              <th className="p-4 text-center font-semibold">Percentage</th>
+                              <th className="p-4 text-center font-semibold">Action</th>
                             </tr>
                           </thead>
                           <tbody>
                             {analysis.chartData.map((item, index) => (
-                              <tr key={index} className="hover:bg-gray-50">
-                                <td className="border p-2">{item.fullAnswer}</td>
-                                <td className="border p-2 text-center font-semibold">{item.count}</td>
-                                <td className="border p-2 text-center">{item.percentage}%</td>
-                                <td className="border p-2 text-center">
+                              <tr key={index} className="border-b border-gray-200 hover:bg-blue-50 transition-colors">
+                                <td className="p-4">{item.fullAnswer}</td>
+                                <td className="p-4 text-center font-bold text-blue-600">{item.count}</td>
+                                <td className="p-4 text-center">
+                                  <span className="inline-block bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium">
+                                    {item.percentage}%
+                                  </span>
+                                </td>
+                                <td className="p-4 text-center">
                                   <button
                                     onClick={() => {
                                       if (item.isOther) {
@@ -453,7 +526,7 @@ const SurveyAnalyticsDashboard = () => {
                                         });
                                       }
                                     }}
-                                    className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
                                   >
                                     View Details
                                   </button>
@@ -470,45 +543,69 @@ const SurveyAnalyticsDashboard = () => {
             ) : (
               /* Single-choice Question Analysis */
               <>
-                <div className="flex gap-2 mb-6">
+                <div className="flex flex-wrap gap-2 mb-6">
                   <button
                     onClick={() => setViewMode('bar')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg ${viewMode === 'bar' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'
-                      }`}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                      viewMode === 'bar' 
+                        ? 'bg-blue-600 text-white shadow-md' 
+                        : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-blue-300'
+                    }`}
                   >
                     <BarChart3 className="w-4 h-4" />
                     Bar Chart
                   </button>
                   <button
                     onClick={() => setViewMode('pie')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg ${viewMode === 'pie' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'
-                      }`}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                      viewMode === 'pie' 
+                        ? 'bg-blue-600 text-white shadow-md' 
+                        : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-blue-300'
+                    }`}
                   >
-                    📊 Pie Chart
+                    <PieChartIcon className="w-4 h-4" />
+                    Pie Chart
                   </button>
                   <button
                     onClick={() => setViewMode('table')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg ${viewMode === 'table' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'
-                      }`}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                      viewMode === 'table' 
+                        ? 'bg-blue-600 text-white shadow-md' 
+                        : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-blue-300'
+                    }`}
                   >
-                    📋 Table
+                    <Table2 className="w-4 h-4" />
+                    Table
                   </button>
                 </div>
 
                 {viewMode === 'bar' && (
                   <ResponsiveContainer width="100%" height={Math.max(400, answerAnalysis.chartData.length * 70)}>
                     <BarChart data={answerAnalysis.chartData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="answer" angle={-45} textAnchor="end" height={100} />
-                      <YAxis
-                        label={{ value: 'Number of Responses', angle: -90, position: 'insideLeft' }}
-                        tickFormatter={(value) => value.toLocaleString()}
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis 
+                        dataKey="answer" 
+                        angle={-45} 
+                        textAnchor="end" 
+                        height={120}
+                        tick={{ fontSize: 12 }}
                       />
-                      <Tooltip
-                        formatter={(value) => [value.toLocaleString() + ' responses', 'Count']}
+                      <YAxis 
+                        label={{ value: 'Responses', angle: -90, position: 'insideLeft' }}
+                        tick={{ fontSize: 12 }}
+                      />
+                      <Tooltip 
+                        contentStyle={{ borderRadius: '8px', border: '2px solid #e5e7eb' }}
+                        formatter={(value) => [`${value} responses (${((value/filteredSurveys.length)*100).toFixed(1)}%)`, 'Count']}
                       />
                       <Legend />
-                      <Bar dataKey="count" fill="#3B82F6" onClick={(data) => setSelectedAnswer({ answer: data.fullAnswer, respondents: answerAnalysis.respondentsByAnswer })} />
+                      <Bar 
+                        dataKey="count" 
+                        fill="#3B82F6" 
+                        radius={[8, 8, 0, 0]}
+                        onClick={(data) => setSelectedAnswer({ answer: data.fullAnswer, respondents: answerAnalysis.respondentsByAnswer })}
+                        style={{ cursor: 'pointer' }}
+                      />
                     </BarChart>
                   </ResponsiveContainer>
                 )}
@@ -523,39 +620,45 @@ const SurveyAnalyticsDashboard = () => {
                         cx="50%"
                         cy="50%"
                         outerRadius={120}
-                        label={(entry) => `${entry.answer} (${entry.percentage}%)`}
+                        label={(entry) => `${entry.percentage}%`}
                         onClick={(data) => setSelectedAnswer({ answer: data.fullAnswer, respondents: answerAnalysis.respondentsByAnswer })}
+                        style={{ cursor: 'pointer' }}
                       >
                         {answerAnalysis.chartData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
                       <Tooltip />
+                      <Legend />
                     </PieChart>
                   </ResponsiveContainer>
                 )}
 
                 {viewMode === 'table' && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
+                  <div className="overflow-x-auto rounded-lg border-2 border-gray-200">
+                    <table className="w-full">
                       <thead>
-                        <tr className="bg-gray-100">
-                          <th className="border p-3 text-left">Answer</th>
-                          <th className="border p-3 text-center">Count</th>
-                          <th className="border p-3 text-center">Percentage</th>
-                          <th className="border p-3 text-center">Action</th>
+                        <tr className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+                          <th className="p-4 text-left font-semibold">Answer</th>
+                          <th className="p-4 text-center font-semibold">Count</th>
+                          <th className="p-4 text-center font-semibold">Percentage</th>
+                          <th className="p-4 text-center font-semibold">Action</th>
                         </tr>
                       </thead>
                       <tbody>
                         {answerAnalysis.chartData.map((item, index) => (
-                          <tr key={index} className="hover:bg-gray-50">
-                            <td className="border p-3">{item.fullAnswer}</td>
-                            <td className="border p-3 text-center font-semibold">{item.count}</td>
-                            <td className="border p-3 text-center">{item.percentage}%</td>
-                            <td className="border p-3 text-center">
+                          <tr key={index} className="border-b border-gray-200 hover:bg-blue-50 transition-colors">
+                            <td className="p-4">{item.fullAnswer}</td>
+                            <td className="p-4 text-center font-bold text-blue-600">{item.count}</td>
+                            <td className="p-4 text-center">
+                              <span className="inline-block bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium">
+                                {item.percentage}%
+                              </span>
+                            </td>
+                            <td className="p-4 text-center">
                               <button
                                 onClick={() => setSelectedAnswer({ answer: item.fullAnswer, respondents: answerAnalysis.respondentsByAnswer })}
-                                className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
                               >
                                 View Details
                               </button>
@@ -572,64 +675,66 @@ const SurveyAnalyticsDashboard = () => {
             {/* Respondent Details Modal */}
             {selectedAnswer && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-lg max-w-6xl w-full max-h-[80vh] overflow-auto">
-                  <div className="sticky top-0 bg-white border-b p-6">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {selectedAnswer.isOther ? 'All Other Opinions' : 'Respondents'}
-                        </h3>
-                        {selectedAnswer.subQuestion && (
-                          <p className="text-sm text-gray-500 mt-1">Sub-question: {selectedAnswer.subQuestion}</p>
-                        )}
-                        {!selectedAnswer.isOther && (
-                          <p className="text-sm text-gray-600 mt-1">Answer: <span className="font-medium">{selectedAnswer.answer}</span></p>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => setSelectedAnswer(null)}
-                        className="text-gray-400 hover:text-gray-600 text-2xl"
-                      >
-                        ✕
-                      </button>
+                <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[85vh] overflow-hidden shadow-2xl">
+                  <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 flex justify-between items-start">
+                    <div>
+                      <h3 className="text-2xl font-bold">
+                        {selectedAnswer.isOther ? 'All Other Opinions' : 'Respondent Details'}
+                      </h3>
+                      {selectedAnswer.subQuestion && (
+                        <p className="text-blue-100 mt-1">Sub-question: {selectedAnswer.subQuestion}</p>
+                      )}
+                      {!selectedAnswer.isOther && (
+                        <p className="text-blue-100 mt-1">Answer: <span className="font-semibold">{selectedAnswer.answer}</span></p>
+                      )}
                     </div>
+                    <button
+                      onClick={() => setSelectedAnswer(null)}
+                      className="text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2 transition-colors"
+                    >
+                      <X className="w-6 h-6" />
+                    </button>
                   </div>
 
-                  <div className="p-6">
+                  <div className="p-6 overflow-y-auto max-h-[calc(85vh-100px)]">
                     {selectedAnswer.isOther ? (
                       /* Show all other opinions grouped */
-                      <div className="space-y-4">
+                      <div className="space-y-6">
                         {selectedAnswer.otherAnswers.map((other, idx) => (
-                          <div key={idx} className="border rounded-lg p-4 bg-gray-50">
-                            <div className="flex justify-between items-center mb-3">
-                              <h4 className="font-semibold text-gray-800">"{other.answer}"</h4>
-                              <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium">
+                          <div key={idx} className="border-2 border-gray-200 rounded-xl p-5 bg-gradient-to-br from-gray-50 to-white">
+                            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-4 pb-4 border-b-2 border-gray-200">
+                              <h4 className="font-bold text-gray-800 text-lg">"{other.answer}"</h4>
+                              <span className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-bold inline-block w-fit">
                                 {other.count} {other.count === 1 ? 'person' : 'people'}
                               </span>
                             </div>
                             <div className="overflow-x-auto">
-                              <table className="w-full border-collapse bg-white">
+                              <table className="w-full border-collapse">
                                 <thead>
                                   <tr className="bg-gray-100">
-                                    <th className="border p-2 text-left text-sm">Name</th>
-                                    <th className="border p-2 text-left text-sm">Age</th>
-                                    <th className="border p-2 text-left text-sm">Gender</th>
-                                    <th className="border p-2 text-left text-sm">Ward</th>
-                                    <th className="border p-2 text-left text-sm">Phone</th>
-                                    <th className="border p-2 text-left text-sm">Caste</th>
-                                    <th className="border p-2 text-left text-sm">Education</th>
+                                    <th className="border border-gray-300 p-3 text-left text-sm font-semibold">Name</th>
+                                    <th className="border border-gray-300 p-3 text-left text-sm font-semibold">Age</th>
+                                    <th className="border border-gray-300 p-3 text-left text-sm font-semibold">Gender</th>
+                                    <th className="border border-gray-300 p-3 text-left text-sm font-semibold">Ward</th>
+                                    <th className="border border-gray-300 p-3 text-left text-sm font-semibold">Phone</th>
+                                    <th className="border border-gray-300 p-3 text-left text-sm font-semibold">Caste</th>
+                                    <th className="border border-gray-300 p-3 text-left text-sm font-semibold">Education</th>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {other.respondents?.map((respondent, rIdx) => (
-                                    <tr key={rIdx} className="hover:bg-gray-50">
-                                      <td className="border p-2 text-sm">{respondent.name}</td>
-                                      <td className="border p-2 text-sm">{respondent.age}</td>
-                                      <td className="border p-2 text-sm">{respondent.gender}</td>
-                                      <td className="border p-2 text-sm">{respondent.wardNumber}</td>
-                                      <td className="border p-2 text-sm">{respondent.phoneNumber}</td>
-                                      <td className="border p-2 text-sm">{respondent.caste}</td>
-                                      <td className="border p-2 text-sm">{respondent.educationLevel}</td>
+                                    <tr key={rIdx} className="hover:bg-blue-50 transition-colors">
+                                      <td className="border border-gray-300 p-3 text-sm">{respondent.name}</td>
+                                      <td className="border border-gray-300 p-3 text-sm">{respondent.age}</td>
+                                      <td className="border border-gray-300 p-3 text-sm">{respondent.gender}</td>
+                                      <td className="border border-gray-300 p-3 text-sm">
+                                        <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded font-medium">
+                                          {respondent.wardNumber || 'N/A'}
+                                        </span>
+                                      </td>
+                                      <td className="border border-gray-300 p-3 text-sm">{respondent.phoneNumber}</td>
+                                      <td className="border border-gray-300 p-3 text-sm">{respondent.caste}</td>
+                                      <td className="border border-gray-300 p-3 text-sm">{respondent.educationLevel}</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -640,32 +745,38 @@ const SurveyAnalyticsDashboard = () => {
                       </div>
                     ) : (
                       /* Show single answer respondents */
-                      <table className="w-full border-collapse">
-                        <thead>
-                          <tr className="bg-gray-100">
-                            <th className="border p-2 text-left">Name</th>
-                            <th className="border p-2 text-left">Age</th>
-                            <th className="border p-2 text-left">Gender</th>
-                            <th className="border p-2 text-left">Ward</th>
-                            <th className="border p-2 text-left">Phone</th>
-                            <th className="border p-2 text-left">Caste</th>
-                            <th className="border p-2 text-left">Education</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {selectedAnswer.respondents.get(selectedAnswer.answer)?.map((respondent, idx) => (
-                            <tr key={idx} className="hover:bg-gray-50">
-                              <td className="border p-2">{respondent.name}</td>
-                              <td className="border p-2">{respondent.age}</td>
-                              <td className="border p-2">{respondent.gender}</td>
-                              <td className="border p-2">{respondent.wardNumber}</td>
-                              <td className="border p-2">{respondent.phoneNumber}</td>
-                              <td className="border p-2">{respondent.caste}</td>
-                              <td className="border p-2">{respondent.educationLevel}</td>
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse">
+                          <thead>
+                            <tr className="bg-gradient-to-r from-blue-100 to-indigo-100">
+                              <th className="border border-gray-300 p-3 text-left font-semibold">Name</th>
+                              <th className="border border-gray-300 p-3 text-left font-semibold">Age</th>
+                              <th className="border border-gray-300 p-3 text-left font-semibold">Gender</th>
+                              <th className="border border-gray-300 p-3 text-left font-semibold">Ward</th>
+                              <th className="border border-gray-300 p-3 text-left font-semibold">Phone</th>
+                              <th className="border border-gray-300 p-3 text-left font-semibold">Caste</th>
+                              <th className="border border-gray-300 p-3 text-left font-semibold">Education</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {selectedAnswer.respondents.get(selectedAnswer.answer)?.map((respondent, idx) => (
+                              <tr key={idx} className="hover:bg-blue-50 transition-colors">
+                                <td className="border border-gray-300 p-3">{respondent.name}</td>
+                                <td className="border border-gray-300 p-3">{respondent.age}</td>
+                                <td className="border border-gray-300 p-3">{respondent.gender}</td>
+                                <td className="border border-gray-300 p-3">
+                                  <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded font-medium">
+                                    {respondent.wardNumber || 'N/A'}
+                                  </span>
+                                </td>
+                                <td className="border border-gray-300 p-3">{respondent.phoneNumber}</td>
+                                <td className="border border-gray-300 p-3">{respondent.caste}</td>
+                                <td className="border border-gray-300 p-3">{respondent.educationLevel}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     )}
                   </div>
                 </div>

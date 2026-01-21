@@ -10,7 +10,6 @@ import dataSurvey from './utils/data';
 import Survey from './Component/ResuableComponent/Survey';
 import toast from 'react-hot-toast';
 
-
 const Home = () => {
   const { user } = useAuth();
 
@@ -43,18 +42,15 @@ const Home = () => {
 
   // --- Survey Reducer Logic ---
   const surveyReducer = (state, action) => {
-
     const { section, questionId, value, type, optionLabel } = action;
     const currentSection = state[section];
 
     const updatedQuestions = currentSection.questions.map((q) => {
       if (q.id === questionId) {
-        // Handle Checkbox (Single string answer)
         if (type === 'checkbox') {
           return { ...q, answer: value };
         }
 
-        // Handle Text (Store as an object to support multiple text fields in one question)
         if (type === 'text') {
           const currentAnswers = typeof q.answer === 'object' ? { ...q.answer } : {};
           return {
@@ -82,11 +78,11 @@ const Home = () => {
     mutationFn: async (data) => {
       await api.post('/api/survey/createsurvey', { data });
     },
-    onSuccess:function(){
-toast.success("Survey Saved Successfully")
+    onSuccess: function() {
+      toast.success("Survey Saved Successfully");
     },
-    onError:function(err){
-      toast.error(err?.response?.data?.message || "Failed to save survey")
+    onError: function(err) {
+      toast.error(err?.response?.data?.message || "Failed to save survey");
     }
   });
 
@@ -108,7 +104,7 @@ toast.success("Survey Saved Successfully")
       <SurveyMetaForm state={personalInfoState} dispatch={dispatch} />
       <ResponsiveVoterTable state={personalInfoState} dispatch={dispatch} />
 
-      {/* Dynamic Dropdown - Scalable for Survey 1, 2, 3... */}
+      {/* Dynamic Dropdown */}
       <div className="max-w-4xl mx-auto my-6 bg-white p-4 rounded-lg shadow-md">
         <label htmlFor="survey-select" className="block text-lg font-medium text-gray-700 mb-2">
           Select Survey
@@ -127,45 +123,21 @@ toast.success("Survey Saved Successfully")
         </select>
       </div>
 
-      {/* --- IMPORTANT: Re-added the Survey Questions Component --- */}
+      {/* --- MOVED: Submit Section is now ABOVE the Survey --- */}
+
+
+
+      {/* Survey Questions Component */}
       <Survey 
         dispatch={surveyDispatch} 
         DevData={surveyState[activeSurvey]} 
         section={activeSurvey} 
+        onSubmit={handleSubmit} // Passing submit handler to the button in Survey header
+        isPending={sendData.isPending}
       />
 
-      {/* Submit Section */}
-      <div className="max-w-4xl mx-auto mt-8 pb-10">
-        <button 
-          onClick={handleSubmit} 
-          disabled={sendData.isPending}
-          className={`w-full py-4 px-6 rounded-xl font-bold text-lg transition-all shadow-md flex items-center justify-center gap-2 ${
-            sendData.isPending 
-              ? "bg-gray-400 cursor-not-allowed" 
-              : "bg-blue-600 text-white hover:bg-blue-700 active:scale-95"
-          }`}
-        >
-          {sendData.isPending ? (
-            <>
-              <span className="animate-spin border-2 border-white border-t-transparent rounded-full h-5 w-5"></span>
-              Saving Survey...
-            </>
-          ) : (
-            "Submit All Data"
-          )}
-        </button>
-
-        {sendData.isError && (
-          <p className="text-red-500 text-center mt-2 font-medium">
-            Error: {sendData.error?.response?.data?.message || "Failed to save survey"}
-          </p>
-        )}
-        {sendData.isSuccess && (
-          <p className="text-green-600 text-center mt-2 font-medium">
-            Survey saved successfully!
-          </p>
-        )}
-      </div>
+      {/* Bottom spacer for better mobile scrolling */}
+      <div className="pb-20"></div>
     </div>
   );
 };

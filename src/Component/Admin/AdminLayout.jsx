@@ -9,7 +9,8 @@ import {
   X, 
   LogOut,
   Bell,
-  Search
+  Search,
+  Edit
 } from 'lucide-react';
 import { Link, useNavigate, Outlet } from 'react-router-dom';
 import api from '../../utils/api';
@@ -47,6 +48,7 @@ const navigate = useNavigate()
     { name: 'Survey Stats', icon: <BarChart3 size={20} />, path: '/admin/stats' },
     // { name: 'Manage Surveys', icon: <ClipboardList size={20} />, path: '/admin/surveys' },
     { name: 'Users List', icon: <Users size={20} />, path: '/admin/users' },
+    { name: 'Edit Content', icon: <Edit size={20} />, path: '/admin/editcontent' },
     // { name: 'Settings', icon: <Settings size={20} />, path: '/admin/setting' },
   ];
 

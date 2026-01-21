@@ -13,6 +13,7 @@ import UserList from './Component/Admin/UserList';
 import AdminSettings from './Component/Admin/AdminSetting';
 import ManageSurvey from './Component/Admin/ManageSurvey';
 import SurveyAnalyticsDashboard from './Component/Admin/SurveyStat';
+import SurveyEditContent from './Component/Admin/EditContent';
 
 function App() {
   const { user, isLoading } = useAuth();
@@ -44,6 +45,7 @@ function App() {
           <Route path='setting'  element={<AdminSettings />} />
           <Route path='stats'  element={<SurveyAnalyticsDashboard />} />
           <Route path='surveys'  element={<ManageSurvey />} />
+          <Route path='editcontent'  element={<SurveyEditContent />} />
           
         </Route>
 
